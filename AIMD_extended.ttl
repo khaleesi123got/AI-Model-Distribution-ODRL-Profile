@@ -1,0 +1,563 @@
+@prefix odrl: <http://www.w3.org/ns/odrl/2/> .
+@prefix dpv:  <https://w3id.org/dpv#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl:  <http://www.w3.org/2002/07owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct:  <http://purl.org/dc/terms/> .
+@prefix schema: <http://schema.org/> .
+@prefix cc:   <http://creativecommons.org/ns#> .
+@prefix profile: <http://www.w3.org/ns/dx/prof/> .
+@prefix airo: <https://delaramglp.github.io/airo/> .
+@prefix dcat: <https://www.w3.org/ns/dcat#> .
+@prefix aimd: <https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#> .
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  AIMD Extended Profile  v3.0
+#  Original profile (v1.0):  Cian Twomey, 2024
+#  Extended by:              Diya Mathew, 2026
+#
+#  v3.0 additions (supervisor feedback, 26 Feb 2026):
+#   1. CO2/Energy disclosure — structured sub-attributes (methodology, hardware,
+#      duration, scope, reporting standard) grounded in CodeCarbon / ML CO2 Impact
+#      and the Hugging Face CO2 model card spec.
+#   2. Copyright / IP policy — structured sub-attributes (opt-out mechanism,
+#      rights-holder registry, TDM waiver) grounded in EU AI Act Art. 53(1)(c)
+#      and DSM Directive Art. 4.
+#   3. Graph-driven obligation definitions — each obligation carries
+#      aimd:evidenceProperty (the metadata field checked) and
+#      aimd:severity ("mandatory" | "recommended") so the compliance checker
+#      can read rules entirely from the graph rather than hardcoding them.
+#   4. Multi-hop provenance — aimd:derivedFromDistribution allows tracing
+#      chains:  ResearchProduct → Model A → Fine-tuned Model B.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+aimd:
+    a owl:Ontology, profile:Profile ;
+    profile:isProfileOf <http://www.w3.org/ns/odrl/2/> ;
+    rdfs:label "AIMD Profile 3.0" ;
+    owl:versionInfo "3.0" ;
+    dct:title "AI Model Distribution — Extended for Academic Repositories" ;
+    dct:creator "Cian Twomey" ;
+    dct:contributor "Diya Mathew" ;
+    dct:created "2024-04-07"^^xsd:date ;
+    dct:modified "2026-03-05"^^xsd:date ;
+    dct:description "AIMD Profile 3.0 extends v2.0 with structured CO2/energy sub-attributes, copyright policy sub-attributes, graph-driven obligation definitions, and multi-hop provenance." ;
+    dct:license <http://creativecommons.org/licenses/by/4.0/> .
+
+# ───────────────────────────────────────────────────────────────────────────────
+# UTILITY PROPERTIES  (used on obligation nodes to drive the generic checker)
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd:evidenceProperty a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain odrl:Action ;
+    rdfs:range xsd:anyURI ;
+    rdfs:label "evidence property"@en ;
+    skos:definition "The full URI of the RDF property whose presence on an aimd:AIModelDistribution node constitutes evidence that this obligation has been satisfied. Used by the generic compliance checker to read rules from the graph."@en .
+
+aimd:severity a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain odrl:Action ;
+    rdfs:range xsd:string ;
+    rdfs:label "severity"@en ;
+    skos:definition "Whether this obligation is 'mandatory' (non-compliance = FAIL) or 'recommended' (non-compliance = WARN). Allows the checker to distinguish hard failures from advisory gaps."@en .
+
+aimd:checkDescription a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain odrl:Action ;
+    rdfs:range xsd:string ;
+    rdfs:label "check description"@en ;
+    skos:definition "Human-readable description of what the checker looks for, shown in the printed compliance report."@en .
+
+aimd:legalBasis a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain odrl:Action ;
+    rdfs:range xsd:string ;
+    rdfs:label "legal basis"@en ;
+    skos:definition "The EU regulation article or policy document that mandates this obligation."@en .
+
+# ───────────────────────────────────────────────────────────────────────────────
+# INHERITED TERMS  (Cian Twomey v1.0 — unchanged)
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd:PurposeOfDerivation a airo:Purpose, odrl:leftOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Purpose of Derivative"@en ;
+    skos:definition "The intended purpose of the AI system derived from this AI model"@en .
+
+aimd:SocialScoring a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Social Scoring"@en ;
+    skos:definition "Using an AI system to evaluate or classify natural persons or groups based on their social behaviour"@en .
+
+aimd:RemoteBiometricIdentification a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Remote Biometric Identification"@en ;
+    skos:definition "Using an AI system for real-time remote biometric identification in publicly accessible spaces"@en .
+
+aimd:BiometricCategorisation a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Biometric Categorisation"@en ;
+    skos:definition "Using an AI system to categorise natural persons based on biometric data"@en .
+
+aimd:Manipulation a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Manipulation"@en ;
+    skos:definition "Using an AI system to manipulate or deceive natural persons"@en .
+
+aimd:VulnerableExploitation a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Exploitation of vulnerable parties"@en ;
+    skos:definition "Using an AI system to exploit vulnerabilities of persons"@en .
+
+aimd:AssessCrimeLikelihood a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Assess Crime Likelihood"@en ;
+    skos:definition "Using an AI system to predict crime likelihood based solely on profiling"@en .
+
+aimd:FacialDataScraping a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Facial Data Scraping"@en ;
+    skos:definition "Using an AI system to create or expand facial recognition databases via untargeted scraping"@en .
+
+aimd:EmotionInference a airo:Purpose, odrl:rightOperand ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Emotion Inference"@en ;
+    skos:definition "Using an AI system to infer emotions in workplaces or educational institutions"@en .
+
+# ── Inherited obligations (v1.0) ──────────────────────────────────────────────
+
+aimd:EstablishRiskManagement a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Establish Risk Management"@en ;
+    skos:definition "Establish a risk management system"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#riskAssessmentURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Risk assessment document URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 9 (High-risk AI systems)" .
+
+aimd:ConductDataGovernance a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Conduct Data Governance"@en ;
+    skos:definition "Ensure training datasets are relevant, representative, accurate"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#trainingDataSummaryURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Training data summary URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 10 (Data and data governance)" .
+
+aimd:ProvideTechDocumentation a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Provide Technical Documentation"@en ;
+    skos:definition "Provide technical documentation demonstrating AI Act compliance"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#modelCardURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Model card URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 11 / Art. 53(1)(a)" .
+
+aimd:Record a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Record"@en ;
+    skos:definition "Allow automatic recording of events over the AI system lifetime"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Logging / record-keeping mechanism declared" ;
+    aimd:legalBasis "EU AI Act Art. 12" .
+
+aimd:ProvideUseInstructions a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Provide Instructions of Use"@en ;
+    skos:definition "Provide instructions of use and transparency on capabilities and limitations"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Instructions of use documented in model card" ;
+    aimd:legalBasis "EU AI Act Art. 13" .
+
+aimd:AllowHumanOversight a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Allow Human Oversight"@en ;
+    skos:definition "Design AI system so it can be overseen by humans while in use"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Human oversight mechanism declared" ;
+    aimd:legalBasis "EU AI Act Art. 14" .
+
+aimd:EstablishQualityManagement a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Establish Quality Management"@en ;
+    skos:definition "Put a quality management system in place"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Quality management system reference present" ;
+    aimd:legalBasis "EU AI Act Art. 17" .
+
+aimd:DocumentAccuracyRobustCybersecurity a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Document Accuracy, Robustness and Cybersecurity"@en ;
+    skos:definition "Document methodologies measuring accuracy, robustness, and cybersecurity"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Accuracy / robustness / security documentation declared" ;
+    aimd:legalBasis "EU AI Act Art. 15" .
+
+aimd:DocumentTrainingData a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Document Training Data"@en ;
+    skos:definition "Document and publish summary of training, testing, and validation data"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#datasetCardURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Dataset card URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 10 / Art. 53(1)(b)" .
+
+aimd:AssessModelRisk a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Assess Model Risk"@en ;
+    skos:definition "Assess and mitigate risks of the AI model"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#riskAssessmentURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Risk assessment URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 9 / Art. 55" .
+
+aimd:ReportSeriousIncidents a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Report Serious Incidents"@en ;
+    skos:definition "Report serious incidents and corrective measures to the EU AI Office"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Incident reporting channel declared" ;
+    aimd:legalBasis "EU AI Act Art. 73" .
+
+aimd:EnsureDataProtection a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Ensure Data Protection"@en ;
+    skos:definition "Ensure personal data is anonymised and consent for processing is obtained"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Data protection / GDPR compliance statement declared" ;
+    aimd:legalBasis "GDPR / EU AI Act Art. 10(5)" .
+
+aimd:UploadDerivations a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Upload Derivation"@en ;
+    skos:definition "Upload published derivative work to the owner's database"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Derivative upload record present" ;
+    aimd:legalBasis "AIMD Profile licence obligation" .
+
+aimd:UploadUseOfDerivation a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Upload Use Of Derivation"@en ;
+    skos:definition "Record and upload usage details accessible by the owner of the original model"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Usage record uploaded to source repository" ;
+    aimd:legalBasis "AIMD Profile licence obligation" .
+
+# ── v2.0 obligations (unchanged) ──────────────────────────────────────────────
+
+aimd:PublishModelCard a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Publish Model Card"@en ;
+    skos:definition "Publish a machine-readable model card"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#modelCardURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Model card URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 53(1)(a); Hugging Face model card spec" .
+
+aimd:PublishDatasetCard a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Publish Dataset Card"@en ;
+    skos:definition "Publish a machine-readable dataset card describing training datasets"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#datasetCardURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Dataset card URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 53(1)(b); Hugging Face dataset card spec" .
+
+aimd:PublishSummaryOfCapabilities a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Publish Summary of Capabilities"@en ;
+    skos:definition "Publish sufficiently detailed summary of capabilities and risks for public disclosure"@en ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Capability summary declared (part of model card)" ;
+    aimd:legalBasis "EU AI Act Art. 53(1)(a); EC AI Office GPAI documentation rules" .
+
+aimd:AttributeTrainingSources a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Attribute Training Sources"@en ;
+    skos:definition "Include clear attribution of all academic open-access works used in training"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#derivedFromResearchProduct" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "derivedFromResearchProduct link present (source repo traceability)" ;
+    aimd:legalBasis "Academic integrity; CC Signals; OpenAIRE attribution norms" .
+
+aimd:PublishBiasReport a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Publish Bias Report"@en ;
+    skos:definition "Publish a bias evaluation report identifying known biases"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#biasReportURL" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "Bias report URL present and not a placeholder" ;
+    aimd:legalBasis "EU AI Act Art. 10(2)(f); academic integrity conditions" .
+
+aimd:RegisterWithSourceRepo a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Register With Source Repository"@en ;
+    skos:definition "Register the downstream AI model with the source institutional repository"@en ;
+    aimd:severity "recommended" ;
+    aimd:checkDescription "Source repository registration link declared" ;
+    aimd:legalBasis "OpenAIRE compliance; EOSC interoperability guidelines" .
+
+aimd:MakeModelOpenAccess a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Make Resulting Model Open Access"@en ;
+    skos:definition "Publish the resulting AI model under an open-access licence consistent with share-alike terms"@en ;
+    aimd:evidenceProperty "http://purl.org/dc/terms/license" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "dct:license present on distribution node" ;
+    aimd:legalBasis "CC ShareAlike; OpenAIRE open science policy" .
+
+aimd:LinkToSourceLicences a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Link to Source Licences"@en ;
+    skos:definition "Include machine-readable links to ODRL licence policies of all source datasets"@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#derivedFromResearchProduct" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "derivedFromResearchProduct link enables licence chain traversal" ;
+    aimd:legalBasis "DCAT-AP; ODRL; OpenAIRE metadata standards" .
+
+# ───────────────────────────────────────────────────────────────────────────────
+# v3.0 DEEP EXTENSION 1: CO2 / ENERGY DISCLOSURE
+#
+# Grounded in:
+#   • Lacoste et al. (2019) "Quantifying the Carbon Emissions of Machine Learning"
+#     https://arxiv.org/abs/1910.09700
+#   • CodeCarbon tool: https://codecarbon.io
+#   • Hugging Face CO2 model card spec:
+#     https://huggingface.co/docs/hub/model-cards-co2
+#   • EU AI Act Art. 53(1)(a) GPAI documentation requirements
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd:DiscloseCO2Emissions a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Disclose CO2 / Energy Emissions"@en ;
+    skos:definition "Disclose the energy consumption and carbon emissions of training and inference. In v3.0 this obligation is broken into structured sub-attributes (see aimd:CO2Disclosure class)."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#co2Disclosure" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "co2Disclosure object present with kgCO2eq, energyKWh, and reportingStandard declared" ;
+    aimd:legalBasis "EU AI Act Art. 53(1)(a); Hugging Face CO2 spec; CodeCarbon" .
+
+# The structured disclosure object — linked from a distribution via aimd:co2Disclosure
+aimd:CO2Disclosure a owl:Class ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "CO2 Disclosure"@en ;
+    skos:definition "A structured record of the energy consumption and carbon footprint of an AI model, following the CodeCarbon / ML CO2 Impact reporting format."@en .
+
+# Sub-properties of CO2Disclosure
+aimd:co2Disclosure a owl:ObjectProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:AIModelDistribution ;
+    rdfs:range aimd:CO2Disclosure ;
+    rdfs:label "co2 disclosure"@en ;
+    skos:definition "Links an AIModelDistribution to its CO2Disclosure record."@en .
+
+aimd:kgCO2eq a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "kg CO2 equivalent"@en ;
+    skos:definition "Total CO2-equivalent emissions (in kg) for training the model. Recommended tool: CodeCarbon."@en .
+
+aimd:energyKWhTotal a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "total energy kWh"@en ;
+    skos:definition "Total energy consumed during training in kilowatt-hours."@en .
+
+aimd:trainingHardware a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:string ;
+    rdfs:label "training hardware"@en ;
+    skos:definition "Hardware used during training, e.g. 'NVIDIA A100 x 8'. Needed to reproduce or estimate emissions independently."@en .
+
+aimd:trainingDurationHours a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "training duration hours"@en ;
+    skos:definition "Wall-clock hours of training. Combined with hardware, allows independent CO2 estimation."@en .
+
+aimd:cloudRegion a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:string ;
+    rdfs:label "cloud region / data centre location"@en ;
+    skos:definition "The geographic region of the data centre used, e.g. 'eu-west-1'. The grid carbon intensity varies significantly by region."@en .
+
+aimd:gridCarbonIntensity a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:decimal ;
+    rdfs:label "grid carbon intensity (gCO2eq/kWh)"@en ;
+    skos:definition "The carbon intensity of the electricity grid used, in gCO2eq/kWh. Source: electricityMap or national grid operator."@en .
+
+aimd:emissionsScope a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:string ;
+    rdfs:label "emissions scope"@en ;
+    skos:definition "Whether the disclosure covers training only, training + inference, or full lifecycle. Values: 'training', 'training+inference', 'full-lifecycle'."@en .
+
+aimd:reportingStandard a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:string ;
+    rdfs:label "reporting standard"@en ;
+    skos:definition "The standard or tool used to measure and report emissions, e.g. 'CodeCarbon v2', 'ML CO2 Impact', 'GHG Protocol Scope 2'."@en .
+
+aimd:co2MeasurementURL a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CO2Disclosure ;
+    rdfs:range xsd:anyURI ;
+    rdfs:label "CO2 measurement report URL"@en ;
+    skos:definition "URL to the full machine-readable emissions report (e.g. a CodeCarbon JSON export or Hugging Face CO2 section of model card)."@en .
+
+# ───────────────────────────────────────────────────────────────────────────────
+# v3.0 DEEP EXTENSION 2: COPYRIGHT / IP POLICY
+#
+# Grounded in:
+#   • EU AI Act Art. 53(1)(c) — GPAI providers must implement a copyright policy
+#   • DSM Directive Art. 4 — text and data mining (TDM) exception + opt-out
+#   • Creative Commons Signals project: https://creativecommons.org/ai-and-the-commons/cc-signals/
+#   • EU AI Office GPAI Code of Practice (draft 2025)
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd:ImplementCopyrightPolicy a odrl:Action ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Implement Copyright Policy"@en ;
+    skos:definition "Implement a policy to comply with EU copyright law for training data. In v3.0 this obligation is broken into structured sub-attributes (see aimd:CopyrightPolicy class)."@en ;
+    aimd:evidenceProperty "https://raw.githubusercontent.com/ci2me/AI-Model-Distribution-ODRL-Profile/main/AIMD.ttl#copyrightPolicy" ;
+    aimd:severity "mandatory" ;
+    aimd:checkDescription "copyrightPolicy object present with optOutMechanism and rightsHolderRegistry declared" ;
+    aimd:legalBasis "EU AI Act Art. 53(1)(c); DSM Directive Art. 4; GPAI Code of Practice" .
+
+aimd:CopyrightPolicy a owl:Class ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Copyright Policy"@en ;
+    skos:definition "A structured declaration of the copyright compliance measures taken when assembling training data, following EU AI Act Art. 53(1)(c) and DSM Directive Art. 4."@en .
+
+aimd:copyrightPolicy a owl:ObjectProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:AIModelDistribution ;
+    rdfs:range aimd:CopyrightPolicy ;
+    rdfs:label "copyright policy"@en ;
+    skos:definition "Links an AIModelDistribution to its copyright compliance record."@en .
+
+aimd:optOutMechanism a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CopyrightPolicy ;
+    rdfs:range xsd:string ;
+    rdfs:label "opt-out mechanism"@en ;
+    skos:definition "How the provider identifies and honours opt-outs from web-crawled training data. E.g. 'robots.txt', 'Spawning AI opt-out registry', 'Have I Been Trained'. Required under DSM Art. 4 and GPAI Code of Practice."@en .
+
+aimd:rightsHolderRegistry a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CopyrightPolicy ;
+    rdfs:range xsd:anyURI ;
+    rdfs:label "rights-holder registry URL"@en ;
+    skos:definition "URL to the registry or database of rights-holders whose works were included in training, or excluded following opt-out."@en .
+
+aimd:tdmWaiver a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CopyrightPolicy ;
+    rdfs:range xsd:string ;
+    rdfs:label "TDM waiver / licence"@en ;
+    skos:definition "The text and data mining licence or waiver applied to training data, e.g. 'DSM Art. 4 TDM exception', 'CC-BY TDM', 'OpenRAIL TDM clause'."@en .
+
+aimd:openAccessSourcesOnly a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CopyrightPolicy ;
+    rdfs:range xsd:boolean ;
+    rdfs:label "open access sources only"@en ;
+    skos:definition "True if training data was sourced exclusively from open-access repositories (e.g. TCD TARA, Zenodo, OpenAIRE). Simplifies copyright obligations significantly."@en .
+
+aimd:ccSignalsCompliant a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CopyrightPolicy ;
+    rdfs:range xsd:boolean ;
+    rdfs:label "CC Signals compliant"@en ;
+    skos:definition "True if the provider has checked CC Signals annotations on all Creative Commons-licensed training sources and respected any AI-training opt-out signals."@en .
+
+aimd:copyrightPolicyDocURL a owl:DatatypeProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:CopyrightPolicy ;
+    rdfs:range xsd:anyURI ;
+    rdfs:label "copyright policy document URL"@en ;
+    skos:definition "URL to the full copyright policy document published by the GPAI provider as required by EU AI Act Art. 53(1)(c)."@en .
+
+# ───────────────────────────────────────────────────────────────────────────────
+# v3.0 STRUCTURAL CLASSES & PROPERTIES
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd:ResearchProduct a owl:Class ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:subClassOf dcat:Dataset ;
+    rdfs:label "Research Product"@en ;
+    skos:definition "A research output (paper, dataset, software, AI model) published via an academic repository such as TCD TARA or Zenodo, described using the OpenAIRE data model and DCAT-AP."@en .
+
+aimd:AIModelDistribution a owl:Class ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:subClassOf dcat:Distribution ;
+    rdfs:label "AI Model Distribution"@en ;
+    skos:definition "A dcat:Distribution representing a downloadable or accessible AI model, carrying an ODRL policy encoding its AI-Act compliance obligations."@en .
+
+aimd:ComplianceReport a owl:Class ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:label "Compliance Report"@en ;
+    skos:definition "A structured record produced by the verification prototype comparing declared obligations against published metadata."@en .
+
+aimd:hasComplianceReport a owl:ObjectProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:AIModelDistribution ;
+    rdfs:range aimd:ComplianceReport ;
+    rdfs:label "has Compliance Report"@en .
+
+# Multi-hop provenance (v3.0) ──────────────────────────────────────────────────
+
+aimd:derivedFromResearchProduct a owl:ObjectProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:AIModelDistribution ;
+    rdfs:range aimd:ResearchProduct ;
+    rdfs:label "derived From Research Product"@en ;
+    skos:definition "Direct link from an AI model distribution to the academic research product it was trained on."@en .
+
+aimd:derivedFromDistribution a owl:ObjectProperty ;
+    rdfs:isDefinedBy aimd: ;
+    rdfs:domain aimd:AIModelDistribution ;
+    rdfs:range aimd:AIModelDistribution ;
+    rdfs:label "derived From Distribution"@en ;
+    skos:definition "Links a fine-tuned or derived AI model distribution back to the upstream model it was derived from. Enables multi-hop provenance chains: ResearchProduct → Model A → Fine-tuned Model B."@en .
+
+# ───────────────────────────────────────────────────────────────────────────────
+# SKOS Collection
+# ───────────────────────────────────────────────────────────────────────────────
+
+aimd:
+    a skos:Collection ;
+    skos:prefLabel "AIMD Profile 3.0 Vocabulary"@en ;
+    skos:scopeNote "AIMD Core Vocabulary Terms — v3.0"@en ;
+    skos:member aimd:PurposeOfDerivation ; skos:member aimd:SocialScoring ;
+    skos:member aimd:RemoteBiometricIdentification ; skos:member aimd:BiometricCategorisation ;
+    skos:member aimd:Manipulation ; skos:member aimd:VulnerableExploitation ;
+    skos:member aimd:AssessCrimeLikelihood ; skos:member aimd:FacialDataScraping ;
+    skos:member aimd:EmotionInference ;
+    skos:member aimd:EstablishRiskManagement ; skos:member aimd:ConductDataGovernance ;
+    skos:member aimd:ProvideTechDocumentation ; skos:member aimd:Record ;
+    skos:member aimd:ProvideUseInstructions ; skos:member aimd:AllowHumanOversight ;
+    skos:member aimd:EstablishQualityManagement ; skos:member aimd:DocumentAccuracyRobustCybersecurity ;
+    skos:member aimd:DocumentTrainingData ; skos:member aimd:AssessModelRisk ;
+    skos:member aimd:ReportSeriousIncidents ; skos:member aimd:EnsureDataProtection ;
+    skos:member aimd:UploadDerivations ; skos:member aimd:UploadUseOfDerivation ;
+    skos:member aimd:PublishModelCard ; skos:member aimd:PublishDatasetCard ;
+    skos:member aimd:DiscloseCO2Emissions ; skos:member aimd:PublishSummaryOfCapabilities ;
+    skos:member aimd:ImplementCopyrightPolicy ; skos:member aimd:AttributeTrainingSources ;
+    skos:member aimd:PublishBiasReport ; skos:member aimd:RegisterWithSourceRepo ;
+    skos:member aimd:MakeModelOpenAccess ; skos:member aimd:LinkToSourceLicences ;
+    skos:member aimd:CO2Disclosure ; skos:member aimd:CopyrightPolicy ;
+    skos:member aimd:ResearchProduct ; skos:member aimd:AIModelDistribution ;
+    skos:member aimd:ComplianceReport ; skos:member aimd:derivedFromResearchProduct ;
+    skos:member aimd:derivedFromDistribution .
